@@ -1,48 +1,47 @@
-// @ts-ignore
 import React, { useState, useEffect } from 'react';
-// @ts-ignore
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  // @ts-ignore
-} from '@/components/ui/Select';
-// @ts-ignore
-import { Button } from '@/components/ui/Button';
-// @ts-ignore
-import { Label } from '@/components/ui/Label';
-import { ChevronUp } from 'lucide-react';
+} from '../components/ui/Select';
+import { Button } from '../components/ui/Button';
+import { Label } from '../components/ui/Label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
 
 const characters = [
   {
     name: 'Jiyan',
+    image: '/images/resonators/jiyan.png',
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Heavy Attack DMG Bonus'],
     energy: {
       range: [15, 40],
-      amount: [3, 4],
+      amount: 4,
     },
   },
   {
     name: 'Changli',
+    image: '/images/resonators/changli.png',
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Resonance Skill DMG Bonus'],
     energy: {
       range: [10, 20],
-      amount: [2, 2],
+      amount: 2,
     },
   },
   {
     name: 'Jinhsi',
-    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Resonance Skill DMG Bonus'],
+    image: '/images/resonators/jinhsi.png',
+    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'Resonance Skill DMG Bonus', 'ATK'],
     energy: {
       range: [0, 35],
-      amount: [0, 3],
+      amount: 3,
     },
   },
   {
     name: 'Xiangli Yao',
+    image: '/images/resonators/xiangliyao.png',
     stats: [
       'Energy Regen',
       'Crit. Rate',
@@ -53,23 +52,49 @@ const characters = [
     ],
     energy: {
       range: [0, 30],
-      amount: [0, 3],
+      amount: 3,
     },
   },
   {
-    name: 'Rover',
-    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%'],
+    name: 'Rover (Havoc)',
+    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'ATK'],
     energy: {
       range: [0, 20],
-      amount: [0, 2],
+      amount: 2,
     },
   },
   {
     name: 'Zhezhi',
-    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Basic Attack DMG Bonus'],
+    image: '/images/resonators/zhezhi.png',
+    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'Basic Attack DMG Bonus', 'ATK%', 'ATK'],
     energy: {
       range: [15, 35],
-      amount: [3, 3],
+      amount: 3,
+    },
+  },
+  {
+    name: 'Calcharo',
+    image: '/images/resonators/calcharo.png',
+    stats: [
+      'Energy Regen',
+      'Crit. Rate',
+      'Crit. DMG',
+      'ATK',
+      'ATK%',
+      'Resonance Liberation DMG Bonus',
+    ],
+    energy: {
+      range: [10, 40],
+      amount: 4,
+    },
+  },
+  {
+    name: 'Lingyang',
+    image: '/images/resonators/lingyang.png',
+    stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'ATK'],
+    energy: {
+      range: [10, 25],
+      amount: 3,
     },
   },
 ];
@@ -120,9 +145,9 @@ const AttributeInput = ({
           <SelectValue placeholder="Select attribute" />
         </SelectTrigger>
         <SelectContent className="bg-white">
-          {Object.keys(attributes).map((attr) => (
-            <SelectItem key={attr} value={attr}>
-              {attr}
+          {Object.keys(attributes).map((attribute) => (
+            <SelectItem key={attribute} value={attribute}>
+              {attribute}
             </SelectItem>
           ))}
         </SelectContent>
@@ -157,10 +182,10 @@ const EchoInput = ({
   onChange: (echoIndex: number, attrIndex: number, field: string, value: string) => void;
 }) => (
   <div className="space-y-2">
-    {echo.map((attribute, attrIndex) => (
+    {echo.map((attribute, attributeIndex) => (
       <AttributeInput
-        key={attrIndex}
-        index={attrIndex}
+        key={attributeIndex}
+        index={attributeIndex}
         attribute={attribute}
         onChange={(attrIndex, field, value) => onChange(echoIndex, attrIndex, field, value)}
       />
@@ -176,20 +201,11 @@ const ResonatorEchoCalculator = () => {
     Array<Array<{ attribute: AttributeType | ''; value: string }>>
   >(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
   const [results, setResults] = useState<ExtendedStatsType | {}>({});
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const sortedCharacters = characters.sort((a, b) => a.name.localeCompare(b.name));
+  const selectedCharacterImage = sortedCharacters.find(
+    (char) => char.name === selectedCharacter
+  )?.image;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.pageYOffset > 300) {
-        setShowBackToTop(true);
-      } else {
-        setShowBackToTop(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
   useEffect(() => {
     if (selectedCharacter) {
       const savedData = localStorage.getItem(selectedCharacter);
@@ -204,18 +220,19 @@ const ResonatorEchoCalculator = () => {
     }
   }, [selectedCharacter]);
 
-  const handleEchoChange = (echoIndex: number, attrIndex: number, field: string, value: string) => {
-    const newEchoes = echoes.map((echo, eIndex) =>
-      eIndex === echoIndex
+  const handleEchoChange = (
+    _echoIndex: number,
+    attrIndex: number,
+    field: string,
+    value: string
+  ) => {
+    const newEchoes = echoes.map((echo, echoIndex) =>
+      echoIndex === _echoIndex
         ? echo.map((attr, aIndex) => (aIndex === attrIndex ? { ...attr, [field]: value } : attr))
         : echo
     );
     setEchoes(newEchoes);
     saveData(newEchoes, results);
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const calculateStats = () => {
@@ -238,22 +255,21 @@ const ResonatorEchoCalculator = () => {
         const isExtraStat = stat === character.stats[character.stats.length - 1];
 
         if (isExtraStat) {
-          min = Math.min(...attrValues) * (5 - character.energy.amount[1]);
-          max = Math.max(...attrValues) * (5 - character.energy.amount[0]);
+          min = Math.min(...attrValues) * (5 - character.energy.amount);
+          max = Math.max(...attrValues) * (5 - character.energy.amount);
         } else {
           min = Math.min(...attrValues) * 5;
           max = Math.max(...attrValues) * 5;
         }
 
-        // Xử lý phạm vi cụ thể cho Energy Regen
         if (stat === 'Energy Regen') {
           [min, max] = character.energy.range;
         }
       }
 
       let status = 'Optimal';
-      if (value < min) status = 'Too Low';
-      if (value > max) status = 'Too High';
+      if (value < min) status = 'Too low';
+      if (value > max) status = 'Too high';
 
       acc[stat as AttributeType] = { value, status, min, max };
       return acc;
@@ -291,8 +307,8 @@ const ResonatorEchoCalculator = () => {
     switch (status) {
       case 'Optimal':
         return 'bg-green-500';
-      case 'Too Low':
-      case 'Too High':
+      case 'Too low':
+      case 'Too high':
         return 'bg-red-500';
       default:
         return 'bg-yellow-500';
@@ -300,114 +316,119 @@ const ResonatorEchoCalculator = () => {
   };
 
   return (
-    <>
-      <Card className="w-full max-w-[500px] mx-auto shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-          <CardTitle className="text-2xl font-bold">Resonator Echo Calculator</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-6">
-            <div>
-              <Label
-                htmlFor="character-select"
-                className="text-sm font-medium text-gray-700 mb-1 block">
-                Select Character
-              </Label>
-              <Select onValueChange={(value: string) => setSelectedCharacter(value)}>
-                <SelectTrigger
-                  id="character-select"
-                  className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-                  <SelectValue placeholder="Select a character" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {characters.map((char) => (
-                    <SelectItem key={char.name} value={char.name}>
-                      {char.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedCharacter && (
-              <div className="flex justify-end">
-                <Button
-                  onClick={clearData}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                  Clear
-                </Button>
-              </div>
-            )}
-
-            {selectedCharacter && (
-              <div className="space-y-4">
-                {echoes.map((echo, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-md">
-                    <h4 className="text-lg font-semibold mb-2">Echo {index + 1}</h4>
-                    <EchoInput echoIndex={index} echo={echo} onChange={handleEchoChange} />
-                  </div>
+    <Card className="w-full max-w-[800px] mx-auto shadow-lg relative my-6">
+      {selectedCharacterImage && (
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{
+            backgroundImage: `url(${selectedCharacterImage})`,
+            backgroundBlendMode: 'overlay',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            backgroundPosition: 'top right',
+          }}></div>
+      )}
+      <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white relative z-10 rounded-t-lg">
+        <CardTitle className="text-2xl font-bold">Resonator Echo Calculator</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label
+              htmlFor="character-select"
+              className="text-sm font-medium text-gray-700 mb-1 block">
+              Resonator
+            </Label>
+            <Select onValueChange={(value: string) => setSelectedCharacter(value)}>
+              <SelectTrigger
+                id="character-select"
+                className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
+                <SelectValue placeholder="Select resonator" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                {sortedCharacters.map((char) => (
+                  <SelectItem key={char.name} value={char.name}>
+                    {char.name}
+                  </SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
 
-            <Button
-              onClick={calculateStats}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
-              disabled={!selectedCharacter}>
-              Calculate
-            </Button>
-
-            {Object.keys(results).length > 0 && (
-              <div className="mt-6 bg-gray-100 p-4 rounded-md">
-                <h3 className="text-xl font-bold mb-3">Results:</h3>
-                <div className="space-y-4">
-                  {Object.entries(results as ExtendedStatsType)
-                    .filter(([_, result]) => result.min !== 0 || result.max !== 0)
-                    .map(([stat, result]) => (
-                      <div key={stat} className="flex flex-col">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{stat}:</span>
-                          <span
-                            className={`${
-                              result.status === 'Optimal' ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                            {result.value.toFixed(1)} ({result.status})
-                          </span>
-                        </div>
-                        <div className="relative pt-1">
-                          <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
-                            <div
-                              style={{
-                                width: `${getProcessWidth(result.value, result.min, result.max)}%`,
-                              }}
-                              className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${getProcessColor(
-                                result.status
-                              )}`}></div>
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-600">
-                            <span>{result.min.toFixed(1)}</span>
-                            <span>{result.value.toFixed(1)}</span>
-                            <span>{result.max.toFixed(1)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
+            {selectedCharacter && (
+              <Button
+                onClick={clearData}
+                className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                Clear
+              </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      {showBackToTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          aria-label="Lên đầu trang">
-          <ChevronUp size={24} />
-        </button>
-      )}
-    </>
+          {selectedCharacter && (
+            <div>
+              <Tabs defaultValue="echo1" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  {echoes.map((_, index) => (
+                    <TabsTrigger key={index} value={`echo${index + 1}`}>
+                      Echo {index + 1}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {echoes.map((echo, index) => (
+                  <TabsContent key={index} value={`echo${index + 1}`}>
+                    <EchoInput echoIndex={index} echo={echo} onChange={handleEchoChange} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </div>
+          )}
+        </div>
+
+        <Button
+          onClick={calculateStats}
+          className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
+          disabled={!selectedCharacter}>
+          Calculate
+        </Button>
+
+        {Object.keys(results).length > 0 && (
+          <div className="mt-6 bg-gray-100 p-4 rounded-md">
+            <h3 className="text-xl font-bold mb-3">Result:</h3>
+            <div className="space-y-4">
+              {Object.entries(results as ExtendedStatsType)
+                .filter(([_, result]) => result.min !== 0 || result.max !== 0)
+                .map(([stat, result]) => (
+                  <div key={stat} className="flex flex-col">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{stat}:</span>
+                      <span
+                        className={`${
+                          result.status === 'Optimal' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                        {result.value.toFixed(1)} ({result.status})
+                      </span>
+                    </div>
+                    <div className="relative pt-1">
+                      <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
+                        <div
+                          style={{
+                            width: `${getProcessWidth(result.value, result.min, result.max)}%`,
+                          }}
+                          className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${getProcessColor(
+                            result.status
+                          )}`}></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>{result.min.toFixed(1)}</span>
+                        <span>{result.value.toFixed(1)}</span>
+                        <span>{result.max.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import ResonatorEchoCalculator from './ResonatorEchoCalculator';
+import ResonatorEchoCalculator from './pages/ResonatorEchoCalculator';
 
 const App = () => {
   return (
