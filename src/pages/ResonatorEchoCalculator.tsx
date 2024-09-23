@@ -18,7 +18,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Heavy Attack DMG Bonus'],
     energy: {
       range: [15, 40],
-      amount: 4,
     },
   },
   {
@@ -27,7 +26,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK', 'ATK%', 'Resonance Skill DMG Bonus'],
     energy: {
       range: [10, 20],
-      amount: 2,
     },
   },
   {
@@ -36,7 +34,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'Resonance Skill DMG Bonus', 'ATK'],
     energy: {
       range: [0, 35],
-      amount: 3,
     },
   },
   {
@@ -52,7 +49,6 @@ const characters = [
     ],
     energy: {
       range: [0, 30],
-      amount: 3,
     },
   },
   {
@@ -60,7 +56,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'ATK'],
     energy: {
       range: [0, 20],
-      amount: 2,
     },
   },
   {
@@ -69,7 +64,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'Basic Attack DMG Bonus', 'ATK%', 'ATK'],
     energy: {
       range: [15, 35],
-      amount: 3,
     },
   },
   {
@@ -85,7 +79,6 @@ const characters = [
     ],
     energy: {
       range: [10, 40],
-      amount: 4,
     },
   },
   {
@@ -94,7 +87,6 @@ const characters = [
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'ATK'],
     energy: {
       range: [10, 25],
-      amount: 3,
     },
   },
 ];
@@ -235,9 +227,33 @@ const ResonatorEchoCalculator = () => {
     saveData(newEchoes, results);
   };
 
+  const calculateAmount = (energyRange: [number, number]): number => {
+    const energyRegenValues = attributes['Energy Regen'];
+    let A = 1;
+    let B = 1;
+
+    for (let i = 1; i <= 5; i++) {
+      if (energyRegenValues[0] * i >= energyRange[0]) {
+        A = i;
+        break;
+      }
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      if (energyRegenValues[energyRegenValues.length - 1] * i >= energyRange[1]) {
+        B = i;
+        break;
+      }
+    }
+
+    return Math.max(A, B);
+  };
+
   const calculateStats = () => {
     const character = characters.find((c) => c.name === selectedCharacter);
     if (!character) return;
+
+    const amount = calculateAmount(character.energy.range as [number, number]);
 
     const stats = Object.keys(attributes).reduce((acc, stat) => {
       const value = echoes.flat().reduce((sum, attr) => {
@@ -255,8 +271,8 @@ const ResonatorEchoCalculator = () => {
         const isExtraStat = stat === character.stats[character.stats.length - 1];
 
         if (isExtraStat) {
-          min = Math.min(...attrValues) * (5 - character.energy.amount);
-          max = Math.max(...attrValues) * (5 - character.energy.amount);
+          min = Math.min(...attrValues) * (5 - amount);
+          max = Math.max(...attrValues) * (5 - amount);
         } else {
           min = Math.min(...attrValues) * 5;
           max = Math.max(...attrValues) * 5;
