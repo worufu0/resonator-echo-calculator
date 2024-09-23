@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/Select';
-import { Button } from '../components/ui/Button';
-import { Label } from '../components/ui/Label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import { Card, Select, Tabs, Button, Form, Progress, Typography, Row, Col, Space } from 'antd';
+
+const { Option } = Select;
+const { TabPane } = Tabs;
+const { Title, Text } = Typography;
 
 const characters = [
   {
@@ -53,6 +47,7 @@ const characters = [
   },
   {
     name: 'Rover (Havoc)',
+    image: '/images/resonators/rover-havoc.png',
     stats: ['Energy Regen', 'Crit. Rate', 'Crit. DMG', 'ATK%', 'ATK'],
     energy: {
       range: [0, 20],
@@ -125,43 +120,36 @@ const AttributeInput = ({
   attribute: { attribute: AttributeType | ''; value: string };
   onChange: (index: number, field: string, value: string) => void;
 }) => (
-  <div className="space-y-2">
-    <Label htmlFor={`attribute-${index}`}>Attribute {index + 1}</Label>
-    <div className="flex space-x-2">
-      <Select
-        onValueChange={(value: string) => onChange(index, 'attribute', value)}
-        value={attribute.attribute}>
-        <SelectTrigger
-          id={`attribute-${index}`}
-          className="w-2/3 bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-          <SelectValue placeholder="Select attribute" />
-        </SelectTrigger>
-        <SelectContent className="bg-white">
+  <Form.Item label={`Attribute ${index + 1}`} style={{ marginBottom: '16px' }}>
+    <Row gutter={8}>
+      <Col span={16}>
+        <Select
+          placeholder="Select attribute"
+          value={attribute.attribute}
+          onChange={(value) => onChange(index, 'attribute', value)}>
           {Object.keys(attributes).map((attribute) => (
-            <SelectItem key={attribute} value={attribute}>
+            <Option key={attribute} value={attribute}>
               {attribute}
-            </SelectItem>
+            </Option>
           ))}
-        </SelectContent>
-      </Select>
-      <Select
-        onValueChange={(value: string) => onChange(index, 'value', value)}
-        value={attribute.value}
-        disabled={!attribute.attribute}>
-        <SelectTrigger className="w-1/3 bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-          <SelectValue placeholder="Value" />
-        </SelectTrigger>
-        <SelectContent className="bg-white">
+        </Select>
+      </Col>
+      <Col span={8}>
+        <Select
+          placeholder="Value"
+          value={attribute.value}
+          onChange={(value) => onChange(index, 'value', value)}
+          disabled={!attribute.attribute}>
           {attribute.attribute &&
             attributes[attribute.attribute].map((value) => (
-              <SelectItem key={value} value={value.toString()}>
+              <Option key={value} value={value.toString()}>
                 {value}
-              </SelectItem>
+              </Option>
             ))}
-        </SelectContent>
-      </Select>
-    </div>
-  </div>
+        </Select>
+      </Col>
+    </Row>
+  </Form.Item>
 );
 
 const EchoInput = ({
@@ -173,7 +161,7 @@ const EchoInput = ({
   echo: Array<{ attribute: AttributeType | ''; value: string }>;
   onChange: (echoIndex: number, attrIndex: number, field: string, value: string) => void;
 }) => (
-  <div className="space-y-2">
+  <Form layout="vertical">
     {echo.map((attribute, attributeIndex) => (
       <AttributeInput
         key={attributeIndex}
@@ -182,17 +170,19 @@ const EchoInput = ({
         onChange={(attrIndex, field, value) => onChange(echoIndex, attrIndex, field, value)}
       />
     ))}
-  </div>
+  </Form>
 );
 
 type ExtendedStatsType = Record<AttributeType, StatResult>;
 
 const ResonatorEchoCalculator = () => {
   const [selectedCharacter, setSelectedCharacter] = useState('');
+  const [activeTab, setActiveTab] = useState('0'); // Thêm state cho tab hiện tại
   const [echoes, setEchoes] = useState<
     Array<Array<{ attribute: AttributeType | ''; value: string }>>
   >(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
   const [results, setResults] = useState<ExtendedStatsType | {}>({});
+  const [calculated, setCalculated] = useState(false);
   const sortedCharacters = characters.sort((a, b) => a.name.localeCompare(b.name));
   const selectedCharacterImage = sortedCharacters.find(
     (char) => char.name === selectedCharacter
@@ -209,6 +199,7 @@ const ResonatorEchoCalculator = () => {
         setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
         setResults({});
       }
+      setActiveTab('0'); // Đặt lại tab về Echo 1 khi chọn resonator mới
     }
   }, [selectedCharacter]);
 
@@ -292,6 +283,7 @@ const ResonatorEchoCalculator = () => {
     }, {} as ExtendedStatsType);
 
     setResults(stats);
+    setCalculated(true);
     saveData(echoes, stats);
   };
 
@@ -307,9 +299,13 @@ const ResonatorEchoCalculator = () => {
 
   const clearData = () => {
     if (selectedCharacter) {
-      localStorage.removeItem(selectedCharacter);
-      setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
-      setResults({});
+      const confirmClear = window.confirm('Are you sure you want to clear the data?');
+      if (confirmClear) {
+        localStorage.removeItem(selectedCharacter);
+        setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
+        setResults({});
+        setCalculated(false);
+      }
     }
   };
 
@@ -319,131 +315,106 @@ const ResonatorEchoCalculator = () => {
     return ((value - min) / (max - min)) * 100;
   };
 
-  const getProcessColor = (status: string) => {
-    switch (status) {
-      case 'Optimal':
-        return 'bg-green-500';
-      case 'Too low':
-      case 'Too high':
-        return 'bg-red-500';
-      default:
-        return 'bg-yellow-500';
-    }
-  };
-
   return (
-    <Card className="w-full max-w-[800px] mx-auto shadow-lg relative my-6">
-      {selectedCharacterImage && (
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{
-            backgroundImage: `url(${selectedCharacterImage})`,
-            backgroundBlendMode: 'overlay',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            backgroundPosition: 'top right',
-          }}></div>
-      )}
-      <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white relative z-10 rounded-t-lg">
-        <CardTitle className="text-2xl font-bold">Resonator Echo Calculator</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label
-              htmlFor="character-select"
-              className="text-sm font-medium text-gray-700 mb-1 block">
-              Resonator
-            </Label>
-            <Select onValueChange={(value: string) => setSelectedCharacter(value)}>
-              <SelectTrigger
-                id="character-select"
-                className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-                <SelectValue placeholder="Select resonator" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
+    <Card
+      title="Resonator Echo Calculator"
+      style={{
+        maxWidth: '1200px',
+        margin: '24px auto',
+        position: 'relative',
+      }}>
+      <Row gutter={16}>
+        <Col span={6}>
+          {selectedCharacterImage && (
+            <img
+              alt={selectedCharacter}
+              src={selectedCharacterImage}
+              style={{ width: '100%', marginBottom: '16px', height: '357px', objectFit: 'cover' }}
+            />
+          )}
+          <Form layout="vertical">
+            <Form.Item label="Resonator">
+              <Select
+                style={{ marginBottom: '16px' }}
+                placeholder="Select resonator"
+                onChange={(value) => {
+                  setSelectedCharacter(value);
+                  // Reset results when changing resonator
+                  setResults({});
+                  setCalculated(false);
+                }}>
                 {sortedCharacters.map((char) => (
-                  <SelectItem key={char.name} value={char.name}>
+                  <Option key={char.name} value={char.name}>
                     {char.name}
-                  </SelectItem>
+                  </Option>
                 ))}
-              </SelectContent>
-            </Select>
+              </Select>
+              {selectedCharacter && (
+                <Button
+                  type="primary"
+                  danger
+                  onClick={clearData}
+                  style={{ width: '100%', marginTop: '8px' }}>
+                  Clear
+                </Button>
+              )}
+            </Form.Item>
+          </Form>
+        </Col>
 
-            {selectedCharacter && (
-              <Button
-                onClick={clearData}
-                className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                Clear
-              </Button>
-            )}
-          </div>
-
+        <Col span={8}>
           {selectedCharacter && (
-            <div>
-              <Tabs defaultValue="echo1" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  {echoes.map((_, index) => (
-                    <TabsTrigger key={index} value={`echo${index + 1}`}>
-                      Echo {index + 1}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {echoes.map((echo, index) => (
-                  <TabsContent key={index} value={`echo${index + 1}`}>
-                    <EchoInput echoIndex={index} echo={echo} onChange={handleEchoChange} />
-                  </TabsContent>
+            <>
+              <Tabs defaultActiveKey="0" activeKey={activeTab} onChange={setActiveTab}>
+                {echoes.map((_, index) => (
+                  <TabPane tab={`Echo ${index + 1}`} key={index}>
+                    <EchoInput echoIndex={index} echo={echoes[index]} onChange={handleEchoChange} />
+                  </TabPane>
                 ))}
               </Tabs>
-            </div>
+              <Button
+                type="primary"
+                onClick={calculateStats}
+                disabled={!selectedCharacter}
+                style={{ width: '100%', marginTop: '8px' }}>
+                Calculate
+              </Button>
+            </>
           )}
-        </div>
+        </Col>
 
-        <Button
-          onClick={calculateStats}
-          className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
-          disabled={!selectedCharacter}>
-          Calculate
-        </Button>
-
-        {Object.keys(results).length > 0 && (
-          <div className="mt-6 bg-gray-100 p-4 rounded-md">
-            <h3 className="text-xl font-bold mb-3">Result:</h3>
-            <div className="space-y-4">
-              {Object.entries(results as ExtendedStatsType)
-                .filter(([_, result]) => result.min !== 0 || result.max !== 0)
-                .map(([stat, result]) => (
-                  <div key={stat} className="flex flex-col">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{stat}:</span>
-                      <span
-                        className={`${
-                          result.status === 'Optimal' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        {result.value.toFixed(1)} ({result.status})
-                      </span>
+        {selectedCharacter && calculated && Object.keys(results).length > 0 && (
+          <Col span={10}>
+            <Card style={{ backgroundColor: '#f0f2f5' }}>
+              <Title level={4}>Result:</Title>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {Object.entries(results as ExtendedStatsType)
+                  .filter(([_, result]) => result.min !== 0 || result.max !== 0)
+                  .map(([stat, result]) => (
+                    <div key={stat}>
+                      <Row justify="space-between">
+                        <Text strong>{stat}:</Text>
+                        <Text type={result.status === 'Optimal' ? 'success' : 'danger'}>
+                          {result.value.toFixed(1)} ({result.status})
+                        </Text>
+                      </Row>
+                      <Progress
+                        percent={getProcessWidth(result.value, result.min, result.max)}
+                        status={result.status === 'Optimal' ? 'success' : 'exception'}
+                        showInfo={false}
+                      />
+                      <Row justify="space-between" style={{ fontSize: '12px', color: '#888' }}>
+                        <Text>{result.min.toFixed(1)}</Text>
+                        <Text>{result.value.toFixed(1)}</Text>
+                        <Text>{result.max.toFixed(1)}</Text>
+                      </Row>
                     </div>
-                    <div className="relative pt-1">
-                      <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
-                        <div
-                          style={{
-                            width: `${getProcessWidth(result.value, result.min, result.max)}%`,
-                          }}
-                          className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${getProcessColor(
-                            result.status
-                          )}`}></div>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>{result.min.toFixed(1)}</span>
-                        <span>{result.value.toFixed(1)}</span>
-                        <span>{result.max.toFixed(1)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
+                  ))}
+              </Space>
+            </Card>
+          </Col>
         )}
-      </CardContent>
+      </Row>
     </Card>
   );
 };
