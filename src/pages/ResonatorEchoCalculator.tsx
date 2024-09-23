@@ -329,7 +329,7 @@ const ResonatorEchoCalculator = () => {
             <img
               alt={selectedCharacter}
               src={selectedCharacterImage}
-              style={{ width: '100%', marginBottom: '16px', height: '357px', objectFit: 'cover' }}
+              style={{ width: '100%', marginBottom: '16px', height: '352px', objectFit: 'cover' }}
             />
           )}
           <Form layout="vertical">
