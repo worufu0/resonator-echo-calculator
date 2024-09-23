@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/Button';
 // @ts-ignore
 import { Label } from '@/components/ui/Label';
+import { ChevronUp } from 'lucide-react';
 
 const characters = [
   {
@@ -175,11 +176,31 @@ const ResonatorEchoCalculator = () => {
     Array<Array<{ attribute: AttributeType | ''; value: string }>>
   >(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
   const [results, setResults] = useState<ExtendedStatsType | {}>({});
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
+    const handleScroll = () => {
+      if (window.pageYOffset > 300) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  useEffect(() => {
     if (selectedCharacter) {
-      setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
-      setResults({});
+      const savedData = localStorage.getItem(selectedCharacter);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setEchoes(parsedData.echoes);
+        setResults(parsedData.results);
+      } else {
+        setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
+        setResults({});
+      }
     }
   }, [selectedCharacter]);
 
@@ -190,6 +211,11 @@ const ResonatorEchoCalculator = () => {
         : echo
     );
     setEchoes(newEchoes);
+    saveData(newEchoes, results);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const calculateStats = () => {
@@ -234,6 +260,25 @@ const ResonatorEchoCalculator = () => {
     }, {} as ExtendedStatsType);
 
     setResults(stats);
+    saveData(echoes, stats);
+  };
+
+  const saveData = (currentEchoes: typeof echoes, currentResults: typeof results) => {
+    if (selectedCharacter) {
+      const dataToSave = {
+        echoes: currentEchoes,
+        results: currentResults,
+      };
+      localStorage.setItem(selectedCharacter, JSON.stringify(dataToSave));
+    }
+  };
+
+  const clearData = () => {
+    if (selectedCharacter) {
+      localStorage.removeItem(selectedCharacter);
+      setEchoes(Array(5).fill(Array(5).fill({ attribute: '', value: '' })));
+      setResults({});
+    }
   };
 
   const getProcessWidth = (value: number, min: number, max: number) => {
@@ -255,93 +300,114 @@ const ResonatorEchoCalculator = () => {
   };
 
   return (
-    <Card className="w-full max-w-[500px] mx-auto shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-        <CardTitle className="text-2xl font-bold">Resonator Echo Calculator</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          <div>
-            <Label
-              htmlFor="character-select"
-              className="text-sm font-medium text-gray-700 mb-1 block">
-              Select Character
-            </Label>
-            <Select onValueChange={(value: string) => setSelectedCharacter(value)}>
-              <SelectTrigger
-                id="character-select"
-                className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-                <SelectValue placeholder="Select a character" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {characters.map((char) => (
-                  <SelectItem key={char.name} value={char.name}>
-                    {char.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedCharacter && (
-            <div className="space-y-4">
-              {echoes.map((echo, index) => (
-                <div key={index} className="bg-gray-50 p-4 rounded-md">
-                  <h4 className="text-lg font-semibold mb-2">Echo {index + 1}</h4>
-                  <EchoInput echoIndex={index} echo={echo} onChange={handleEchoChange} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Button
-            onClick={calculateStats}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
-            disabled={!selectedCharacter}>
-            Calculate
-          </Button>
-
-          {Object.keys(results).length > 0 && (
-            <div className="mt-6 bg-gray-100 p-4 rounded-md">
-              <h3 className="text-xl font-bold mb-3">Results:</h3>
-              <div className="space-y-4">
-                {Object.entries(results as ExtendedStatsType)
-                  .filter(([_, result]) => result.min !== 0 || result.max !== 0)
-                  .map(([stat, result]) => (
-                    <div key={stat} className="flex flex-col">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{stat}:</span>
-                        <span
-                          className={`${
-                            result.status === 'Optimal' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                          {result.value.toFixed(1)} ({result.status})
-                        </span>
-                      </div>
-                      <div className="relative pt-1">
-                        <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
-                          <div
-                            style={{
-                              width: `${getProcessWidth(result.value, result.min, result.max)}%`,
-                            }}
-                            className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${getProcessColor(
-                              result.status
-                            )}`}></div>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>{result.min.toFixed(1)}</span>
-                          <span>{result.value.toFixed(1)}</span>
-                          <span>{result.max.toFixed(1)}</span>
-                        </div>
-                      </div>
-                    </div>
+    <>
+      <Card className="w-full max-w-[500px] mx-auto shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+          <CardTitle className="text-2xl font-bold">Resonator Echo Calculator</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            <div>
+              <Label
+                htmlFor="character-select"
+                className="text-sm font-medium text-gray-700 mb-1 block">
+                Select Character
+              </Label>
+              <Select onValueChange={(value: string) => setSelectedCharacter(value)}>
+                <SelectTrigger
+                  id="character-select"
+                  className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
+                  <SelectValue placeholder="Select a character" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {characters.map((char) => (
+                    <SelectItem key={char.name} value={char.name}>
+                      {char.name}
+                    </SelectItem>
                   ))}
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            {selectedCharacter && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={clearData}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            {selectedCharacter && (
+              <div className="space-y-4">
+                {echoes.map((echo, index) => (
+                  <div key={index} className="bg-gray-50 p-4 rounded-md">
+                    <h4 className="text-lg font-semibold mb-2">Echo {index + 1}</h4>
+                    <EchoInput echoIndex={index} echo={echo} onChange={handleEchoChange} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button
+              onClick={calculateStats}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
+              disabled={!selectedCharacter}>
+              Calculate
+            </Button>
+
+            {Object.keys(results).length > 0 && (
+              <div className="mt-6 bg-gray-100 p-4 rounded-md">
+                <h3 className="text-xl font-bold mb-3">Results:</h3>
+                <div className="space-y-4">
+                  {Object.entries(results as ExtendedStatsType)
+                    .filter(([_, result]) => result.min !== 0 || result.max !== 0)
+                    .map(([stat, result]) => (
+                      <div key={stat} className="flex flex-col">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{stat}:</span>
+                          <span
+                            className={`${
+                              result.status === 'Optimal' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                            {result.value.toFixed(1)} ({result.status})
+                          </span>
+                        </div>
+                        <div className="relative pt-1">
+                          <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
+                            <div
+                              style={{
+                                width: `${getProcessWidth(result.value, result.min, result.max)}%`,
+                              }}
+                              className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${getProcessColor(
+                                result.status
+                              )}`}></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>{result.min.toFixed(1)}</span>
+                            <span>{result.value.toFixed(1)}</span>
+                            <span>{result.max.toFixed(1)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          aria-label="Lên đầu trang">
+          <ChevronUp size={24} />
+        </button>
+      )}
+    </>
   );
 };
 
